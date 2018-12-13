@@ -5,7 +5,6 @@ import time
 import argparse, os, sys
 import mrcfile
 import math
-from optimizationUtil import *
 from FDRutil import *
 
 #*************************************************************
@@ -20,6 +19,8 @@ cmdl_parser.add_argument('-em', '--em_map', default=[], nargs='*', required=True
 cmdl_parser.add_argument('-p', '--apix', metavar="apix",  type=float, required=True, help='pixel Size of input map');
 cmdl_parser.add_argument('-lowPassFilter', '--lowPassFilter', type=float, required=False,  help='Resolution to lowPass filter');
 cmdl_parser.add_argument('-addFrames', '--addFrames', type=int, required=False, help='add Frames');
+cmdl_parser.add_argument('-firstFrame', '--firstFrame', type=int, required=False, help='first frame to be used, counting starts with 0');
+cmdl_parser.add_argument('-lastFrame', '--lastFrame', type=int, required=False, help='last frame to be used, counting ends with numFrames-1');
 
 #--------------------------------------------------------------------------
 def kernelRegression(frameData, providedResolution):
@@ -418,6 +419,19 @@ def main():
 	else:
 		addFrames = args.addFrames;
 	
+	if args.firstFrame is None:
+		firstFrame = 0;
+	else:
+		firstFrame = args.firstFrame;
+
+	if args.lastFrame is None:
+		lastFrame = numFrames-1;
+	else:
+		lastFrame = args.lastFrame;
+
+	#update number of frames
+	numFrames = lastFrame-firstFrame+1;
+
 	#some initialization
 	numXPatches, numYPatches, numZPatches, patchSize, sizeMap = getInitialMapStats(args.em_map);
 	splitFilename = os.path.splitext(os.path.basename(args.em_map[0]));
@@ -468,7 +482,17 @@ def main():
 				frameInd = 0;
 				addFrameInd = 0; #for adding subsequent frames
 				allFrameInd = 0;
+				frameCounter = 0;
 				for filename in args.em_map:
+					
+					if frameCounter < firstFrame:
+						frameCounter = frameCounter + 1;
+						continue;
+					elif frameCounter > lastFrame:
+						break;
+					else:
+						frameCounter = frameCounter + 1;
+					
 					tmpMap = mrcfile.open(filename, mode='r+');
 					tmpMapData = np.copy(tmpMap.data);
 					
